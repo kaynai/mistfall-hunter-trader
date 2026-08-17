@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>交易大厅 · 雾影猎人交易站</title>
+  <link rel="icon" href="img/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+
+  <div class="page-hero">
+    <div class="hero-orn"></div>
+    <div class="wrap">
+      <h1>交易大厅</h1>
+      <p>挑选雾晶货币、武器与装备 · 价格按当日国际汇率实时换算为所选币种</p>
+    </div>
+  </div>
+
+  <section class="section" style="padding-top:34px;">
+    <div class="wrap">
+      <div class="notice" id="rate-notice">📈 正在加载当日国际汇率…</div>
+
+      <div class="toolbar" style="margin-top:16px;">
+        <div class="search-box"><input type="search" id="search" placeholder="搜索商品名称…"></div>
+        <div class="cat-tabs" id="cat-tabs"></div>
+      </div>
+
+      <div class="item-grid" id="item-grid"></div>
+      <div class="empty" id="empty" style="display:none;">
+        <div class="big">🗡️</div>
+        <div>没有找到相关商品，换个关键词试试</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    let allListings = [];
+    let activeCat = 'all';
+    let keyword = '';
+
+    window.__setCurrencyHook(() => { if (allListings.length) render(); });
+
+    async function init() {
+      const rates = await loadRates();
+      if (rates) {
+        document.getElementById('rate-notice').innerHTML =
+          `📈 当日汇率已更新（${rates.date}，源：${rates.source}）· 当前展示币种 <b>${Store.currency}</b>（${curName(Store.currency)}）`;
+      }
+      const data = await getListings();
+
+      // 分类页签
+      const tabs = document.getElementById('cat-tabs');
+      tabs.innerHTML = data.categories.map((c) =>
+        `<button class="cat-tab ${c.id === 'all' ? 'active' : ''}" data-cat="${c.id}">${c.name}</button>`).join('');
+      tabs.querySelectorAll('.cat-tab').forEach((t) =>
+        t.addEventListener('click', () => {
+          activeCat = t.dataset.cat;
+          tabs.querySelectorAll('.cat-tab').forEach((x) => x.classList.remove('active'));
+          t.classList.add('active');
+          render();
+        }));
+
+      allListings = data.listings;
+      render();
+
+      document.getElementById('search').addEventListener('input', (e) => {
+        keyword = e.target.value.trim().toLowerCase();
+        render();
+      });
+    }
+
+    function render() {
+      const grid = document.getElementById('item-grid');
+      const empty = document.getElementById('empty');
+      const cur = Store.currency;
+      const list = allListings.filter((l) => {
+        const catOk = activeCat === 'all' || l.category === activeCat;
+        const kwOk = !keyword || l.name.toLowerCase().includes(keyword) || l.sub.toLowerCase().includes(keyword);
+        return catOk && kwOk;
+      });
+
+      if (!list.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      grid.innerHTML = list.map((l) => `
+        <div class="item-card">
+          <div class="thumb">
+            ${l.hot ? '<span class="tag">🔥 热销</span>' : ''}
+            <span class="safe">✓ 担保</span>
+            <img src="${l.image}" alt="${l.name}" loading="lazy">
+          </div>
+          <div class="body">
+            <div class="name">${l.name}</div>
+            <div class="sub">${l.sub}</div>
+            <div class="seller">${l.seller}</div>
+            <div class="stock ${l.stock < 10 ? 'low' : ''}">库存 ${l.stock}</div>
+            <div class="foot">
+              <span class="price">${fmtMoney(cnyTo(l.priceCny), cur)}</span>
+              <button class="btn-add" onclick="addToCart('${l.id}')">加入购物车</button>
+            </div>
+          </div>
+        </div>`).join('');
+    }
+
+    init();
+  </script>
+</body>
+</html>
