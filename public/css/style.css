@@ -443,4 +443,127 @@ img { display: block; max-width: 100%; }
   .section { padding: 44px 0; }
   .hero { min-height: 460px; }
   .cart-btn span.lbl { display: none; }
+  .header-tools .lang-switch { display: none; }
 }
+
+/* ============ 账户 / 表单 / 后台 ============ */
+/* 语言切换 */
+.lang-switch .lang-btn {
+  min-width: 56px; text-align: center;
+}
+
+/* 登录注册表单 */
+.auth-forms { max-width: 480px; margin: 0 auto; }
+.auth-tabs {
+  display: flex; gap: 6px; background: var(--surface); padding: 6px;
+  border-radius: var(--radius); margin-bottom: 18px; border: 1px solid var(--line);
+}
+.auth-tab {
+  flex: 1; padding: 10px; background: transparent; color: var(--text-2);
+  border: none; border-radius: var(--radius-sm); font-size: 14px; transition: .2s;
+}
+.auth-tab.active { background: var(--gold); color: #181308; font-weight: 600; }
+.auth-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px;
+}
+.auth-card.hidden { display: none; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; color: var(--text-2); }
+.field input, .field select, .field textarea {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: var(--radius-sm); padding: 11px 13px; font-size: 14px; outline: none;
+  transition: border-color .2s; font-family: inherit; resize: vertical;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+.hint { font-size: 12px; color: var(--muted); }
+.hidden { display: none !important; }
+
+/* 按钮 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-2), var(--gold)); color: #181308;
+  border: none; border-radius: var(--radius-sm); padding: 12px 18px; font-weight: 600;
+  font-size: 14px; cursor: pointer; transition: transform .1s, box-shadow .2s;
+}
+.btn-primary:hover { box-shadow: 0 6px 20px rgba(216,178,90,.35); transform: translateY(-1px); }
+.btn-ghost {
+  background: transparent; border: 1px solid var(--line); color: var(--text-2);
+  border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; cursor: pointer; transition: .2s;
+}
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold-2); }
+.btn-ghost.sm { padding: 5px 10px; font-size: 12px; }
+.btn-ghost.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* 账户面板 */
+.account-panel { max-width: 780px; margin: 0 auto; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 22px; margin-bottom: 18px;
+}
+.panel-user { display: flex; align-items: center; gap: 16px; }
+.avatar-lg {
+  width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--gold-2), var(--amber)); color: #181308;
+  font-size: 24px; font-weight: 700;
+}
+.panel-body { display: flex; flex-direction: column; gap: 18px; }
+.panel-block {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 22px; box-shadow: var(--shadow);
+}
+.panel-block h3 { color: var(--gold-2); margin-bottom: 14px; font-family: var(--font-serif); }
+.panel-block h4 { color: var(--text); margin: 20px 0 10px; font-size: 15px; }
+.panel-block .btn-primary { margin-top: 14px; }
+.muted { color: var(--muted); font-size: 13px; }
+.ok { color: var(--ok); }
+.off { color: var(--danger); }
+
+/* 卖家挂单列表 */
+#seller-list, #all-listings { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.mine-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.mine-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mine-info .tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+.tag.ok { background: rgba(76,208,138,.15); color: var(--ok); }
+.tag.off { background: rgba(224,106,90,.15); color: var(--danger); }
+.mine-actions { display: flex; gap: 8px; }
+
+/* 模态框 */
+.modal-mask {
+  position: fixed; inset: 0; background: rgba(5,8,12,.7); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+}
+.modal {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
+  width: 100%; max-width: 460px; padding: 24px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 14px; max-height: 90vh; overflow-y: auto;
+}
+.modal h3 { color: var(--gold-2); font-family: var(--font-serif); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+/* 后台 */
+.admin-content { display: flex; flex-direction: column; gap: 18px; max-width: 820px; margin: 0 auto; }
+.pay-status { font-size: 13px; color: var(--text-2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pay-status select {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 6px; padding: 4px 8px;
+}
+
+/* 头部账户 */
+.account-chip {
+  display: inline-flex; align-items: center; gap: 7px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 30px; padding: 4px 12px 4px 5px; font-size: 13px;
+  transition: border-color .2s;
+}
+.account-chip:hover { border-color: var(--gold); }
+.avatar {
+  width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--gold-2), var(--amber));
+  color: #181308; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+.login-btn { display: inline-block; font-size: 13px; }
+
