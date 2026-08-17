@@ -5,7 +5,8 @@
     { "id": "currency", "name": "雾晶货币" },
     { "id": "weapon", "name": "武器" },
     { "id": "gear", "name": "装备" },
-    { "id": "consumable", "name": "消耗品" }
+    { "id": "consumable", "name": "消耗品" },
+    { "id": "other", "name": "其他" }
   ],
   "listings": [
     { "id": "cur-1", "category": "currency", "name": "雾晶 · 小袋", "sub": "10,000 雾晶 · 极速发货", "priceCny": 28, "image": "img/item_essence.png", "stock": 999, "seller": "雾门商团", "safety": true, "hot": true },
