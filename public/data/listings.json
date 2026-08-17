@@ -1,0 +1,20 @@
+{
+  "base": "CNY",
+  "categories": [
+    { "id": "all", "name": "全部" },
+    { "id": "currency", "name": "雾晶货币" },
+    { "id": "weapon", "name": "武器" },
+    { "id": "gear", "name": "装备" },
+    { "id": "consumable", "name": "消耗品" }
+  ],
+  "listings": [
+    { "id": "cur-1", "category": "currency", "name": "雾晶 · 小袋", "sub": "10,000 雾晶 · 极速发货", "priceCny": 28, "image": "img/item_essence.png", "stock": 999, "seller": "雾门商团", "safety": true, "hot": true },
+    { "id": "cur-2", "category": "currency", "name": "雾晶 · 标准袋", "sub": "50,000 雾晶 · 多送 2%", "priceCny": 128, "image": "img/item_essence.png", "stock": 999, "seller": "雾门商团", "safety": true, "hot": true },
+    { "id": "cur-3", "category": "currency", "name": "雾晶 · 大袋", "sub": "150,000 雾晶 · 多送 5%", "priceCny": 358, "image": "img/item_essence.png", "stock": 999, "seller": "雾门商团", "safety": true, "hot": false },
+    { "id": "weapon-1", "category": "weapon", "name": "龙裔之刃", "sub": "传说级武器 · 附魔槽 ×3", "priceCny": 888, "image": "img/item_sword.png", "stock": 3, "seller": "夜枭猎手", "safety": true, "hot": true },
+    { "id": "gear-1", "category": "gear", "name": "雾行者披风", "sub": "史诗级背部装备 · 潜行加成", "priceCny": 328, "image": "img/item_cloak.png", "stock": 12, "seller": "夜枭猎手", "safety": true, "hot": false },
+    { "id": "gear-2", "category": "gear", "name": "圣银弹匣（5 组）", "sub": "高级弹药 · 对暗裔伤害 +15%", "priceCny": 66, "image": "img/item_ammo.png", "stock": 50, "seller": "雾门商团", "safety": true, "hot": true },
+    { "id": "consumable-1", "category": "consumable", "name": "黑雾精华 ×100", "sub": "制作 / 强化核心材料", "priceCny": 45, "image": "img/item_essence.png", "stock": 200, "seller": "旅商卡尔", "safety": true, "hot": false },
+    { "id": "consumable-2", "category": "consumable", "name": "净化药剂包 ×50", "sub": "解除雾蚀 · 常备补给", "priceCny": 30, "image": "img/item_essence.png", "stock": 300, "seller": "旅商卡尔", "safety": true, "hot": false }
+  ]
+}
