@@ -92,10 +92,30 @@
     let payment = 'paypal';
     let orderId = null;
 
-    window.__setCurrencyHook(() => renderCart());
+    window.__onCurrencyChange = () => renderCart();
+    window.__onLangChange = () => {
+      renderHeader(location.pathname.split('/').pop() || 'index.html');
+      renderFooter();
+      applyCheckoutLang();
+      renderCart();
+    };
+
+    const CHECKOUT_TEXT = {
+      zh: { h1: '结算支付', sub: '确认购物车 · 选择贝宝 PayPal 或国际支付宝完成付款', payBtn: '立即支付' },
+      en: { h1: 'Checkout', sub: 'Review your cart · Pay with PayPal or Alipay Global', payBtn: 'Pay Now' },
+    };
+    function applyCheckoutLang() {
+      const tx = CHECKOUT_TEXT[Store.lang] || CHECKOUT_TEXT.zh;
+      const h1 = document.querySelector('.page-hero h1');
+      const p = document.querySelector('.page-hero p');
+      if (h1) h1.textContent = tx.h1;
+      if (p) p.textContent = tx.sub;
+      document.getElementById('btn-pay').textContent = tx.payBtn;
+    }
 
     async function init() {
       await loadRates();
+      applyCheckoutLang();
       renderCart();
       bindTabs();
     }
@@ -124,10 +144,10 @@
 
         list.innerHTML = items.map((it) => `
           <div class="cart-item">
-            <img src="${it.image}" alt="${it.name}">
+            <img src="${it.image || 'img/item_essence.png'}" alt="${it.name}">
             <div class="ci-info">
               <div class="ci-name">${it.name}</div>
-              <div class="ci-sub">${it.sub} · ${it.seller}</div>
+              <div class="ci-sub">${it.sub || it.category || ''} · ${it.seller || it.sellerName || ''}</div>
               <div class="ci-qty">
                 <button onclick="chgQty('${it.id}', -1)">−</button>
                 <span class="n">${it.qty}</span>
@@ -181,17 +201,15 @@
       btn.disabled = true;
       btn.textContent = '创建订单…';
       try {
-        const res = await fetch('/api/orders', {
+        const data = await api('/api/orders', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: {
             items: Store.cart,
             currency: Store.currency,
             payment,
-          }),
+          },
+          auth: true, // 若已登录则关联买家
         });
-        const data = await res.json();
-        if (!res.ok) { throw new Error(data.error || '创建订单失败'); }
 
         orderId = data.orderId;
 
