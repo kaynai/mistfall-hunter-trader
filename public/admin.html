@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台管理 · 雾影猎人交易站</title>
+  <link rel="icon" href="img/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+
+  <div class="page-hero">
+    <div class="hero-orn"></div>
+    <div class="wrap">
+      <h1>后台管理</h1>
+      <p>支付密钥配置（贝宝 / 国际支付宝）· 全部挂单管理</p>
+    </div>
+  </div>
+
+  <section class="section" style="padding-top:34px;">
+    <div class="wrap">
+      <div id="admin-msg"></div>
+      <div id="admin-content" class="admin-content"></div>
+    </div>
+  </section>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    // 管理员登录检查：如果当前非管理员，给出登录提示
+    window.__onLangChange = () => {
+      renderHeader(location.pathname.split('/').pop() || 'index.html');
+      renderFooter();
+    };
+
+    async function init() {
+      const msg = document.getElementById('admin-msg');
+      if (!isLoggedIn()) {
+        msg.innerHTML = `<div class="notice">请先在「我的账户」登录一个管理员账户。</div>
+          <p style="margin-top:12px">管理员账户：需在服务器数据中以 role=admin 注册，或用邮箱注册后升级。<br>
+          演示用法：如尚无管理员，可在服务端 <code>data/users.json</code> 将某用户 role 改为 <code>"admin"</code> 后重启。</p>`;
+        return;
+      }
+      if (Store.user.role !== 'admin') {
+        msg.innerHTML = `<div class="notice">当前账户不是管理员（角色：${Store.user.role}），无权访问后台。</div>`;
+        return;
+      }
+      await renderPayConfig();
+      await renderAllListings();
+    }
+
+    async function renderPayConfig() {
+      let status = { paypal: {}, alipay: {} };
+      try { status = (await api('/api/admin/payment-config')).status || status; } catch (e) {}
+      const box = document.getElementById('admin-content');
+      box.innerHTML = `
+        <div class="panel-block">
+          <h3>⚙️ 支付密钥配置</h3>
+          <p class="muted">在此填写贝宝（PayPal）与国际支付宝的商户密钥，保存后立即生效，无需重启。密钥不会明文回显。</p>
+
+          <h4>贝宝 PayPal</h4>
+          <div class="pay-status">当前状态：${status.paypal.configured ? '<b class="ok">已配置</b>' : '<b class="off">未配置（演示模式）</b>'}
+            · 模式：<select id="pp-mode"><option value="sandbox" ${(status.paypal.mode||'sandbox')==='sandbox'?'selected':''}>Sandbox 测试</option><option value="live" ${(status.paypal.mode)==='live'?'selected':''}>Live 正式</option></select>
+            · Client ID：${status.paypal.hasClientId ? '✔ 已填' : '✖ 未填'}
+            · Secret：${status.paypal.hasClientSecret ? '✔ 已填' : '✖ 未填'}
+          </div>
+          <div class="field"><label>Client ID</label><input type="text" id="pp-client-id" placeholder="AZ..."></div>
+          <div class="field"><label>Client Secret</label><input type="password" id="pp-secret" placeholder="••••••"></div>
+
+          <h4>国际支付宝 Alipay Global</h4>
+          <div class="pay-status">当前状态：${status.alipay.configured ? '<b class="ok">已配置</b>' : '<b class="off">未配置（演示模式）</b>'}
+            · App ID：${status.alipay.hasAppId ? '✔ 已填' : '✖ 未填'}
+            · 应用私钥：${status.alipay.hasPrivateKey ? '✔ 已填' : '✖ 未填'}
+            · 支付宝公钥：${status.alipay.hasPublicKey ? '✔ 已填' : '✖ 未填'}
+          </div>
+          <div class="field"><label>App ID</label><input type="text" id="ap-app-id" placeholder="2021xxxx"></div>
+          <div class="field"><label>应用私钥（RSA2, PEM）</label><textarea id="ap-priv" rows="3" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"></textarea></div>
+          <div class="field"><label>支付宝公钥（验签）</label><textarea id="ap-pub" rows="3" placeholder="-----BEGIN PUBLIC KEY-----&#10;...&#10;-----END PUBLIC KEY-----"></textarea></div>
+          <div class="field"><label>异步通知地址 notify_url</label><input type="text" id="ap-notify" placeholder="https://你的域名/api/alipay/notify"></div>
+          <div class="field"><label>同步返回地址 return_url</label><input type="text" id="ap-return" placeholder="https://你的域名/checkout.html"></div>
+
+          <button class="btn-primary" onclick="savePayConfig()">保存支付配置</button>
+        </div>
+
+        <div class="panel-block" id="all-listings-block">
+          <h3>📦 全部卖家挂单</h3>
+          <div id="all-listings"></div>
+        </div>
+      `;
+    }
+
+    async function savePayConfig() {
+      const body = {
+        paypal: {
+          mode: document.getElementById('pp-mode').value,
+          clientId: document.getElementById('pp-client-id').value,
+          clientSecret: document.getElementById('pp-secret').value,
+        },
+        alipay: {
+          appId: document.getElementById('ap-app-id').value,
+          privateKey: document.getElementById('ap-priv').value,
+          alipayPublicKey: document.getElementById('ap-pub').value,
+          notifyUrl: document.getElementById('ap-notify').value,
+          returnUrl: document.getElementById('ap-return').value,
+        },
+      };
+      try {
+        await api('/api/admin/payment-config', { method: 'POST', body });
+        toast('支付配置已保存');
+        await renderPayConfig();
+        await renderAllListings();
+      } catch (err) { toast(err.message); }
+    }
+
+    async function renderAllListings() {
+      let listings = [];
+      try { listings = (await api('/api/admin/listings')).listings; } catch (e) {}
+      const box = document.getElementById('all-listings');
+      if (!box) return;
+      if (!listings.length) { box.innerHTML = '<p class="muted">暂无卖家挂单。</p>'; return; }
+      box.innerHTML = listings.map((l) => `
+        <div class="mine-row">
+          <div class="mine-info">
+            <b>${l.name}</b>
+            <span class="tag ${l.status === 'active' ? 'ok' : 'off'}">${l.status}</span>
+            <span class="muted">¥${l.priceCny} · 库存 ${l.stock} · 卖家 ${l.sellerName || l.sellerId}</span>
+          </div>
+          <div class="mine-actions">
+            <button class="btn-ghost sm" onclick="adminToggle('${l.id}')">${l.status === 'active' ? '下架' : '上架'}</button>
+            <button class="btn-ghost sm danger" onclick="adminDel('${l.id}')">删除</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function adminToggle(id) {
+      const status = prompt('输入新状态：active（上架）/ inactive（下架）');
+      if (!status) return;
+      try { await api('/api/seller/listings/' + id + '/status', { method: 'POST', body: { status } }); toast('已更新'); renderAllListings(); }
+      catch (e) { toast(e.message); }
+    }
+
+    async function adminDel(id) {
+      if (!confirm('确定删除该挂单？')) return;
+      try { await api('/api/seller/listings/' + id, { method: 'DELETE' }); toast('已删除'); renderAllListings(); }
+      catch (e) { toast(e.message); }
+    }
+
+    init();
+  </script>
+</body>
+</html>
