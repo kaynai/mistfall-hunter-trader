@@ -107,7 +107,12 @@
   <script src="js/common.js"></script>
   <script>
     let hotRendered = false;
-    window.__setCurrencyHook(() => { if (hotRendered) renderHot(); });
+    window.__onCurrencyChange = () => { if (hotRendered) renderHot(); };
+    window.__onLangChange = () => {
+      renderHeader(location.pathname.split('/').pop() || 'index.html');
+      renderFooter();
+      if (hotRendered) renderHot();
+    };
 
     async function renderHot() {
       const grid = document.getElementById('hot-grid');
