@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>结算支付 · 雾影猎人交易站</title>
+  <link rel="icon" href="img/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+
+  <div class="page-hero">
+    <div class="hero-orn"></div>
+    <div class="wrap">
+      <h1>结算支付</h1>
+      <p>确认购物车 · 选择贝宝 PayPal 或国际支付宝完成付款</p>
+    </div>
+  </div>
+
+  <section class="section" style="padding-top:34px;">
+    <div class="wrap checkout-grid">
+      <!-- 购物车 -->
+      <div>
+        <div class="section-head" style="text-align:left; margin-bottom:16px;">
+          <h2 style="font-size:22px;">购物车</h2>
+        </div>
+        <div class="cart-list" id="cart-list"></div>
+        <div class="empty" id="cart-empty" style="display:none;">
+          <div class="big">🛒</div>
+          <div>购物车是空的</div>
+          <div style="margin-top:14px;"><a class="btn btn-gold-line" href="shop.html">去交易大厅逛逛</a></div>
+        </div>
+      </div>
+
+      <!-- 订单摘要 + 支付 -->
+      <div>
+        <div class="summary">
+          <h3>订单摘要</h3>
+          <div id="sum-rows"></div>
+          <div class="sum-row total">
+            <span>应付总额</span>
+            <span id="sum-total">—</span>
+          </div>
+          <div class="sum-row rate" id="sum-rate"></div>
+
+          <div class="pay-tabs" style="margin-top:18px;">
+            <button class="pay-tab active" data-pay="paypal" id="tab-paypal">
+              <span class="pay-ico">💳</span>
+              <span><span class="pay-name">贝宝 PayPal</span><br><span class="pay-desc">全球支付</span></span>
+            </button>
+            <button class="pay-tab" data-pay="alipay" id="tab-alipay">
+              <span class="pay-ico">🌐</span>
+              <span><span class="pay-name">支付宝国际版</span><br><span class="pay-desc">跨境支付</span></span>
+            </button>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" id="btn-pay" onclick="placeOrder()">立即支付</button>
+          <div id="paypal-button-container" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 成功弹窗 -->
+  <div class="modal-mask" id="success-modal">
+    <div class="modal">
+      <div class="m-ico">✅</div>
+      <h3>支付成功</h3>
+      <p>订单号 <span class="order-id" id="ok-order"></span><br>平台已开始发货，请留意游戏内交易与邮件通知。</p>
+      <button class="btn btn-gold-line" onclick="closeSuccess()">继续浏览</button>
+    </div>
+  </div>
+
+  <!-- 演示模式提示弹窗 -->
+  <div class="modal-mask" id="demo-modal">
+    <div class="modal">
+      <div class="m-ico">🧪</div>
+      <h3>演示模式</h3>
+      <p>尚未配置支付密钥，当前使用演示支付流程。<br>点击「模拟支付成功」体验完整下单流程。</p>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button class="btn btn-primary" id="demo-pay-btn" onclick="demoPay()">模拟支付成功</button>
+        <button class="btn btn-ghost" onclick="closeDemo()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    let payment = 'paypal';
+    let orderId = null;
+
+    window.__setCurrencyHook(() => renderCart());
+
+    async function init() {
+      await loadRates();
+      renderCart();
+      bindTabs();
+    }
+
+    function renderCart() {
+      const list = document.getElementById('cart-list');
+      const empty = document.getElementById('cart-empty');
+      const cur = Store.currency;
+
+      if (!Store.cart.length) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        document.getElementById('sum-total').textContent = '—';
+        document.getElementById('sum-rows').innerHTML = '';
+        document.getElementById('sum-rate').textContent = '';
+        return;
+      }
+      empty.style.display = 'none';
+
+      // 获取商品信息
+      getListings().then((data) => {
+        const items = Store.cart.map((it) => {
+          const l = data.listings.find((x) => x.id === it.id);
+          return l ? { ...l, qty: it.qty } : null;
+        }).filter(Boolean);
+
+        list.innerHTML = items.map((it) => `
+          <div class="cart-item">
+            <img src="${it.image}" alt="${it.name}">
+            <div class="ci-info">
+              <div class="ci-name">${it.name}</div>
+              <div class="ci-sub">${it.sub} · ${it.seller}</div>
+              <div class="ci-qty">
+                <button onclick="chgQty('${it.id}', -1)">−</button>
+                <span class="n">${it.qty}</span>
+                <button onclick="chgQty('${it.id}', 1)">+</button>
+              </div>
+            </div>
+            <div class="ci-price">${fmtMoney(cnyTo(it.priceCny * it.qty), cur)}</div>
+            <button class="ci-del" onclick="removeItem('${it.id}')">✕</button>
+          </div>`).join('');
+
+        const totalCny = items.reduce((s, it) => s + it.priceCny * it.qty, 0);
+        const total = cnyTo(totalCny);
+        document.getElementById('sum-total').textContent = fmtMoney(total, cur);
+        document.getElementById('sum-rows').innerHTML = `
+          <div class="sum-row"><span>商品数</span><span>${items.reduce((s, it) => s + it.qty, 0)} 件</span></div>
+          <div class="sum-row"><span>单价基准</span><span>人民币 CNY</span></div>`;
+        document.getElementById('sum-rate').textContent = Store.rates
+          ? `汇率基准 1 ${cur} ≈ ${fmtMoney(Store.rates.rates[cur] ? 1 / Store.rates.rates[cur] : 1, 'CNY')}（${Store.rates.date}）`
+          : '汇率加载中…';
+      });
+    }
+
+    function chgQty(id, d) {
+      const it = Store.cart.find((x) => x.id === id);
+      if (!it) return;
+      it.qty += d;
+      if (it.qty < 1) it.qty = 1;
+      if (it.qty > 99) it.qty = 99;
+      saveCart();
+      renderCart();
+    }
+    function removeItem(id) {
+      Store.cart = Store.cart.filter((x) => x.id !== id);
+      saveCart();
+      renderCart();
+    }
+
+    function bindTabs() {
+      document.querySelectorAll('.pay-tab').forEach((t) =>
+        t.addEventListener('click', () => {
+          payment = t.dataset.pay;
+          document.querySelectorAll('.pay-tab').forEach((x) => x.classList.remove('active'));
+          t.classList.add('active');
+        }));
+    }
+
+    // 提交订单
+    async function placeOrder() {
+      if (!Store.cart.length) { toast('购物车为空'); return; }
+      const btn = document.getElementById('btn-pay');
+      btn.disabled = true;
+      btn.textContent = '创建订单…';
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: Store.cart,
+            currency: Store.currency,
+            payment,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { throw new Error(data.error || '创建订单失败'); }
+
+        orderId = data.orderId;
+
+        // 演示模式
+        if (data.demo) {
+          btn.textContent = '立即支付';
+          btn.disabled = false;
+          document.getElementById('demo-modal').classList.add('open');
+          return;
+        }
+
+        // 支付宝：跳转支付
+        if (data.payUrl) {
+          window.location.href = data.payUrl;
+          return;
+        }
+
+        // PayPal：跳转审批链接
+        if (data.approveLink) {
+          // 若加载了 PayPal SDK 则走 JS，否则直接跳转
+          if (window.paypal) {
+            renderPayPalButton(data.paypalOrderId);
+          } else {
+            window.location.href = data.approveLink;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        toast('下单失败：' + e.message);
+      } finally {
+        btn.textContent = '立即支付';
+        btn.disabled = false;
+      }
+    }
+
+    function renderPayPalButton(paypalOrderId) {
+      const btn = document.getElementById('btn-pay');
+      const cont = document.getElementById('paypal-button-container');
+      btn.style.display = 'none';
+      cont.style.display = 'block';
+      paypal.Buttons({
+        style: { color: 'gold', shape: 'rect', label: 'pay' },
+        async onApprove(data, actions) {
+          const r = await fetch(`/api/orders/${orderId}/capture`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paypalOrderId }),
+          });
+          const j = await r.json();
+          if (j.status === 'paid') showSuccess();
+        },
+      }).render(cont);
+    }
+
+    // 演示支付
+    async function demoPay() {
+      if (!orderId) return;
+      const r = await fetch(`/api/orders/${orderId}/demo-pay`, { method: 'POST' });
+      const j = await r.json();
+      if (j.status === 'paid') {
+        document.getElementById('demo-modal').classList.remove('open');
+        showSuccess();
+      }
+    }
+
+    function showSuccess() {
+      Store.cart = [];
+      saveCart();
+      renderCart();
+      document.getElementById('ok-order').textContent = orderId;
+      document.getElementById('success-modal').classList.add('open');
+    }
+    function closeSuccess() {
+      document.getElementById('success-modal').classList.remove('open');
+      location.href = 'shop.html';
+    }
+    function closeDemo() {
+      document.getElementById('demo-modal').classList.remove('open');
+    }
+
+    init();
+  </script>
+</body>
+</html>
