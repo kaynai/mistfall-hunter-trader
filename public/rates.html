@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>汇率行情 · 雾影猎人交易站</title>
+  <link rel="icon" href="img/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+
+  <div class="page-hero">
+    <div class="hero-orn"></div>
+    <div class="wrap">
+      <h1>汇率行情</h1>
+      <p>每日国际汇率实时更新 · 支持美元、欧元、英镑、日元等 12 种主流货币</p>
+    </div>
+  </div>
+
+  <section class="section" style="padding-top:34px;">
+    <div class="wrap">
+      <div class="rate-update" id="rate-meta">
+        <span class="dot"></span><span>加载汇率…</span>
+      </div>
+
+      <div class="rate-table-wrap">
+        <table class="rate-table">
+          <thead>
+            <tr><th>货币</th><th>代码</th><th>1 ${'CNY'} = </th><th>兑换成人民币</th></tr>
+          </thead>
+          <tbody id="rate-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- 汇率换算器 -->
+      <div class="section-head" style="margin-top:44px;">
+        <div class="sec-kicker">Currency Converter</div>
+        <h2>汇率换算器</h2>
+        <p>输入金额，实时换算为目标货币（按当日国际汇率）</p>
+      </div>
+      <div class="converter">
+        <div class="cv-row">
+          <input type="number" id="cv-amount" value="100" min="0" step="any">
+          <select id="cv-from">
+            <option value="CNY">人民币 (CNY ¥)</option>
+            <option value="USD">美元 (USD $)</option>
+            <option value="EUR">欧元 (EUR €)</option>
+            <option value="GBP">英镑 (GBP £)</option>
+            <option value="JPY">日元 (JPY ¥)</option>
+            <option value="HKD">港币 (HKD)</option>
+            <option value="KRW">韩元 (KRW)</option>
+            <option value="AUD">澳元 (AUD)</option>
+            <option value="CAD">加元 (CAD)</option>
+            <option value="SGD">新加坡元 (SGD)</option>
+            <option value="CHF">瑞士法郎 (CHF)</option>
+            <option value="MXN">墨西哥比索 (MXN)</option>
+          </select>
+        </div>
+        <div class="cv-out" id="cv-out"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    const ALL = ['CNY', 'USD', 'EUR', 'GBP', 'JPY', 'HKD', 'KRW', 'AUD', 'CAD', 'SGD', 'CHF', 'MXN'];
+
+    function renderRates() {
+      const tbody = document.getElementById('rate-tbody');
+      const meta = document.getElementById('rate-meta');
+      const r = Store.rates;
+      if (!r) { meta.innerHTML = '<span class="dot"></span><span>汇率加载失败，请点击刷新</span>'; return; }
+      meta.innerHTML = `
+        <span class="dot"></span><span>数据日期 <b style="color:var(--gold-2)">${r.date}</b> · 数据源 ${r.source} · 基准 ${r.base}</span>
+        <button onclick="refreshRates()">🔄 刷新汇率</button>`;
+
+      tbody.innerHTML = ALL.map((c) => {
+        const sym = curSymbol(c);
+        const name = curName(c);
+        const rate = c === 'CNY' ? 1 : r.rates[c];
+        const rateStr = rate ? fmtMoney(rate, 'CNY') : '—';
+        const inverse = rate ? (1 / rate) : 0;
+        return `<tr>
+          <td><div class="cur"><span class="sym">${sym}</span><span class="code">${c}</span></div></td>
+          <td>${name}</td>
+          <td class="rate-val">1 ${c} = ${rateStr}</td>
+          <td>${fmtMoney(inverse, c)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function refreshRates() {
+      document.getElementById('rate-meta').innerHTML = '<span class="dot"></span><span>正在刷新…</span>';
+      Store.rates = await loadRates(true);
+      renderRates();
+    }
+
+    // 换算器
+    function renderConverter() {
+      const amount = parseFloat(document.getElementById('cv-amount').value) || 0;
+      const from = document.getElementById('cv-from').value;
+      const out = document.getElementById('cv-out');
+      const r = Store.rates;
+      if (!r) { out.innerHTML = '<div class="cv-item">汇率暂不可用</div>'; return; }
+      // 先换算成 CNY
+      let cny;
+      if (from === 'CNY') cny = amount;
+      else { const fRate = r.rates[from]; cny = fRate ? amount / fRate : 0; }
+
+      const targets = ['USD', 'EUR', 'GBP', 'JPY', 'HKD', 'KRW', 'AUD', 'CAD', 'SGD', 'CHF', 'MXN'];
+      out.innerHTML = targets.map((c) => {
+        const tRate = r.rates[c];
+        const val = tRate ? cny * tRate : 0;
+        return `<div class="cv-item"><b>${fmtMoney(val, c)}</b>${c}</div>`;
+      }).join('');
+    }
+
+    document.getElementById('cv-amount').addEventListener('input', renderConverter);
+    document.getElementById('cv-from').addEventListener('change', renderConverter);
+
+    async function init() {
+      Store.rates = await loadRates();
+      renderRates();
+      renderConverter();
+    }
+    init();
+  </script>
+</body>
+</html>
