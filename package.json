@@ -1,0 +1,24 @@
+{
+  "name": "mistfall-hunter-trader",
+  "version": "1.0.0",
+  "description": "雾影猎人(Mistfall Hunter)交易平台 - 每日国际汇率 + 贝宝/国际支付宝支付",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mistfall-hunter",
+    "trading",
+    "paypal",
+    "alipay"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
