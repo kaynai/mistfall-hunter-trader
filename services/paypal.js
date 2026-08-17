@@ -1,22 +1,35 @@
 const config = require('../config');
+const payConfig = require('./payment-config');
 
 // PayPal 支付服务：直接调用 PayPal REST API（无需额外 SDK）
-// 未配置密钥时进入 demo 模式，便于本地联调前端流程
+// 密钥来源：后台管理页面配置 > .env 环境变量
+// 未配置密钥时进入 demo 模式
 
 let tokenCache = { token: null, expiresAt: 0 };
 
+function getPaypalConfig() {
+  return payConfig.getPaymentConfig().paypal;
+}
+
 function configured() {
-  return Boolean(config.paypal.clientId && config.paypal.clientSecret);
+  const c = getPaypalConfig();
+  return Boolean(c.clientId && c.clientSecret);
+}
+
+function baseUrl() {
+  const c = getPaypalConfig();
+  return c.mode === 'live'
+    ? 'https://api-m.paypal.com'
+    : 'https://api-m.sandbox.paypal.com';
 }
 
 async function getToken() {
   if (tokenCache.token && Date.now() < tokenCache.expiresAt - 60 * 1000) {
     return tokenCache.token;
   }
-  const auth = Buffer.from(
-    `${config.paypal.clientId}:${config.paypal.clientSecret}`
-  ).toString('base64');
-  const res = await fetch(`${config.paypal.baseUrl}/v1/oauth2/token`, {
+  const c = getPaypalConfig();
+  const auth = Buffer.from(`${c.clientId}:${c.clientSecret}`).toString('base64');
+  const res = await fetch(`${baseUrl()}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${auth}`,
@@ -36,7 +49,7 @@ async function getToken() {
 // 创建 PayPal 订单
 async function createOrder({ amount, currency, reference, description }) {
   const token = await getToken();
-  const res = await fetch(`${config.paypal.baseUrl}/v2/checkout/orders`, {
+  const res = await fetch(`${baseUrl()}/v2/checkout/orders`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -67,7 +80,7 @@ async function createOrder({ amount, currency, reference, description }) {
 async function captureOrder(orderId) {
   const token = await getToken();
   const res = await fetch(
-    `${config.paypal.baseUrl}/v2/checkout/orders/${orderId}/capture`,
+    `${baseUrl()}/v2/checkout/orders/${orderId}/capture`,
     {
       method: 'POST',
       headers: {
