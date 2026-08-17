@@ -7,6 +7,7 @@ const categories = [
   { id: 'weapon', name: '武器' },
   { id: 'gear', name: '装备' },
   { id: 'consumable', name: '消耗品' },
+  { id: 'other', name: '其他' },
 ];
 
 const listings = [
