@@ -121,8 +121,31 @@
     document.getElementById('cv-amount').addEventListener('input', renderConverter);
     document.getElementById('cv-from').addEventListener('change', renderConverter);
 
+    const RATES_TEXT = {
+      zh: { h1: '汇率行情', sub: '每日国际汇率实时更新 · 支持美元、欧元、英镑、日元等 12 种主流货币', cvTitle: '汇率换算器', cvSub: '输入金额，实时换算为目标货币（按当日国际汇率）' },
+      en: { h1: 'FX Rates', sub: 'Live daily international exchange rates · USD, EUR, GBP, JPY & more', cvTitle: 'Currency Converter', cvSub: 'Enter an amount to convert at today\'s international rate' },
+    };
+    function applyRatesLang() {
+      const tx = (RATES_TEXT[Store.lang] || RATES_TEXT.zh);
+      const heroH = document.querySelector('.page-hero h1');
+      const heroP = document.querySelector('.page-hero p');
+      const cvH = document.querySelectorAll('.panel h2')[0];
+      const cvP = document.querySelectorAll('.panel p')[0];
+      if (heroH) heroH.textContent = tx.h1;
+      if (heroP) heroP.textContent = tx.sub;
+      if (cvH) cvH.textContent = tx.cvTitle;
+      if (cvP) cvP.textContent = tx.cvSub;
+    }
+    window.__onLangChange = () => {
+      renderHeader(location.pathname.split('/').pop() || 'index.html');
+      renderFooter();
+      applyRatesLang();
+      renderRates();
+    };
+
     async function init() {
       Store.rates = await loadRates();
+      applyRatesLang();
       renderRates();
       renderConverter();
     }
