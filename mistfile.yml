@@ -1,0 +1,9 @@
+# 雾影猎人交易站 - 云托管部署说明
+# 本文件帮助在 Cloud Studio / 腾讯云托管等平台一键部署本项目
+
+# ---- 依赖安装 ----
+install: npm install
+
+# ---- 启动命令 ----
+# 云平台会执行 npm start（即 node server.js）
+start: npm start
