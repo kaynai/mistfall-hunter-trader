@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的账户 · 雾影猎人交易站</title>
+  <link rel="icon" href="img/logo.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+
+  <div class="page-hero">
+    <div class="hero-orn"></div>
+    <div class="wrap">
+      <h1 id="hero-title">我的账户</h1>
+      <p id="hero-sub">注册登录 · 卖家自助上架 · 自定义价格与库存</p>
+    </div>
+  </div>
+
+  <section class="section" style="padding-top:34px;">
+    <div class="wrap">
+      <!-- 未登录：登录 / 注册 / 找回 -->
+      <div id="auth-forms" class="auth-forms">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login" id="tab-login">登录</button>
+          <button class="auth-tab" data-tab="register" id="tab-register">注册</button>
+          <button class="auth-tab" data-tab="forgot" id="tab-forgot">找回密码</button>
+        </div>
+
+        <!-- 登录 -->
+        <form class="auth-card" id="form-login" onsubmit="return doLogin(event)">
+          <div class="field"><label>邮箱</label><input type="email" id="login-email" required placeholder="you@example.com"></div>
+          <div class="field"><label>密码</label><input type="password" id="login-pass" required placeholder="••••••"></div>
+          <button class="btn-primary" type="submit">登录</button>
+        </form>
+
+        <!-- 注册 -->
+        <form class="auth-card hidden" id="form-register" onsubmit="return doRegister(event)">
+          <div class="field"><label>邮箱</label><input type="email" id="reg-email" required placeholder="you@example.com"></div>
+          <div class="field"><label>昵称</label><input type="text" id="reg-name" placeholder="你的昵称"></div>
+          <div class="field"><label>密码（至少 6 位）</label><input type="password" id="reg-pass" required minlength="6" placeholder="••••••"></div>
+          <div class="field">
+            <label>账户类型</label>
+            <select id="reg-role">
+              <option value="buyer">买家</option>
+              <option value="seller">卖家（可上架商品）</option>
+            </select>
+          </div>
+          <button class="btn-primary" type="submit">注册</button>
+        </form>
+
+        <!-- 找回密码 -->
+        <form class="auth-card hidden" id="form-forgot" onsubmit="return doForgot(event)">
+          <p class="hint">演示模式：直接重置为新密码（生产环境将发送验证邮件）</p>
+          <div class="field"><label>注册邮箱</label><input type="email" id="forgot-email" required placeholder="you@example.com"></div>
+          <div class="field"><label>新密码（至少 6 位）</label><input type="password" id="forgot-pass" required minlength="6"></div>
+          <button class="btn-primary" type="submit">重置密码</button>
+        </form>
+      </div>
+
+      <!-- 已登录：卖家中心 -->
+      <div id="account-panel" class="account-panel hidden"></div>
+    </div>
+  </section>
+
+  <footer class="site-footer" id="site-footer"></footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    let currentTab = 'login';
+    let sellerListings = [];
+
+    window.__onLangChange = () => {
+      renderHeader(location.pathname.split('/').pop() || 'index.html');
+      renderFooter();
+      applyLang();
+      if (isLoggedIn()) renderPanel();
+    };
+
+    function applyLang() {
+      document.getElementById('hero-title').textContent = Store.lang === 'en' ? 'My Account' : '我的账户';
+      document.getElementById('hero-sub').textContent = Store.lang === 'en'
+        ? 'Register / Log in / Seller self-listing with custom prices'
+        : '注册登录 · 卖家自助上架 · 自定义价格与库存';
+      const tabs = document.querySelectorAll('.auth-tab');
+      const labels = Store.lang === 'en' ? ['Log in', 'Sign up', 'Reset password'] : ['登录', '注册', '找回密码'];
+      tabs.forEach((el, i) => el.textContent = labels[i]);
+      const tl = Store.lang === 'en' ? 'Email' : '邮箱';
+      const pwl = Store.lang === 'en' ? 'Password (min 6 chars)' : '密码（至少 6 位）';
+      document.querySelectorAll('#form-login label')[0].textContent = tl;
+      document.querySelectorAll('#form-login label')[1].textContent = Store.lang === 'en' ? 'Password' : '密码';
+      document.querySelectorAll('#form-register label')[0].textContent = tl;
+      document.querySelectorAll('#form-register label')[1].textContent = Store.lang === 'en' ? 'Nickname' : '昵称';
+      document.querySelectorAll('#form-register label')[2].textContent = pwl;
+      document.querySelectorAll('#form-register label')[3].textContent = Store.lang === 'en' ? 'Account type' : '账户类型';
+      document.querySelectorAll('#form-forgot label')[0].textContent = tl;
+      document.querySelectorAll('#form-forgot label')[1].textContent = pwl;
+    }
+
+    function showTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.auth-tab').forEach((el) => el.classList.toggle('active', el.dataset.tab === tab));
+      document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+      document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+      document.getElementById('form-forgot').classList.toggle('hidden', tab !== 'forgot');
+    }
+
+    async function doLogin(e) {
+      e.preventDefault();
+      try {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-pass').value;
+        const d = await api('/api/auth/login', { method: 'POST', body: { email, password }, auth: false });
+        setAuth(d.token, d.user);
+        toast('欢迎回来，' + d.user.name);
+        renderPanel();
+      } catch (err) { toast(err.message); }
+      return false;
+    }
+
+    async function doRegister(e) {
+      e.preventDefault();
+      try {
+        const email = document.getElementById('reg-email').value;
+        const name = document.getElementById('reg-name').value;
+        const password = document.getElementById('reg-pass').value;
+        const role = document.getElementById('reg-role').value;
+        const d = await api('/api/auth/register', { method: 'POST', body: { email, password, name, role }, auth: false });
+        setAuth(d.token, d.user);
+        toast('注册成功！');
+        renderPanel();
+      } catch (err) { toast(err.message); }
+      return false;
+    }
+
+    async function doForgot(e) {
+      e.preventDefault();
+      try {
+        const email = document.getElementById('forgot-email').value;
+        const newPassword = document.getElementById('forgot-pass').value;
+        const d = await api('/api/auth/forgot', { method: 'POST', body: { email, newPassword }, auth: false });
+        toast(d.message || '密码已重置');
+        showTab('login');
+      } catch (err) { toast(err.message); }
+      return false;
+    }
+
+    async function doLogout() {
+      try { await api('/api/auth/logout', { method: 'POST' }); } catch (e) {}
+      setAuth('', null);
+      location.reload();
+    }
+
+    // ---------- 卖家中心 ----------
+    async function loadSellerListings() {
+      try { sellerListings = (await api('/api/seller/listings')).listings; }
+      catch (e) { sellerListings = []; }
+    }
+
+    function renderPanel() {
+      const panel = document.getElementById('account-panel');
+      const forms = document.getElementById('auth-forms');
+      if (!isLoggedIn()) {
+        forms.classList.remove('hidden');
+        panel.classList.add('hidden');
+        return;
+      }
+      forms.classList.add('hidden');
+      panel.classList.remove('hidden');
+      const u = Store.user;
+      panel.innerHTML = `
+        <div class="panel-head">
+          <div class="panel-user">
+            <div class="avatar-lg">${(u.name || u.email).charAt(0).toUpperCase()}</div>
+            <div>
+              <h2>${u.name || u.email}</h2>
+              <p class="muted">${u.email} · ${u.role === 'admin' ? '管理员' : u.role === 'seller' ? '卖家' : '买家'}</p>
+            </div>
+          </div>
+          <button class="btn-ghost" onclick="doLogout()">退出登录</button>
+        </div>
+
+        <div class="panel-body">
+          ${u.role === 'seller' || u.role === 'admin' ? `
+          <div class="panel-block">
+            <h3>我的挂单</h3>
+            <button class="btn-primary" id="btn-new-listing">+ 发布新挂单</button>
+            <div id="seller-list"></div>
+          </div>` : `
+          <div class="panel-block">
+            <h3>我是买家</h3>
+            <p class="muted">如需上架商品出售，请重新注册一个「卖家」账户，或联系管理员升级。</p>
+          </div>`}
+        </div>
+      `;
+      panel.querySelector('#btn-new-listing')?.addEventListener('click', () => openListingForm());
+      if (u.role === 'seller' || u.role === 'admin') renderSellerList();
+    }
+
+    async function renderSellerList() {
+      await loadSellerListings();
+      const box = document.getElementById('seller-list');
+      if (!box) return;
+      if (!sellerListings.length) {
+        box.innerHTML = '<p class="muted">还没有挂单，点击上方按钮发布第一个商品吧。</p>';
+        return;
+      }
+      box.innerHTML = sellerListings.map((l) => `
+        <div class="mine-row">
+          <div class="mine-info">
+            <b>${l.name}</b>
+            <span class="tag ${l.status === 'active' ? 'ok' : 'off'}">${l.status === 'active' ? '已上架' : '已下架'}</span>
+            <span class="muted">¥${l.priceCny} · 库存 ${l.stock} · ${l.category}</span>
+          </div>
+          <div class="mine-actions">
+            <button class="btn-ghost sm" onclick="toggleStatus('${l.id}', '${l.status === 'active' ? 'inactive' : 'active'}')">${l.status === 'active' ? '下架' : '上架'}</button>
+            <button class="btn-ghost sm" onclick="editListing('${l.id}')">编辑</button>
+            <button class="btn-ghost sm danger" onclick="delListing('${l.id}')">删除</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function toggleStatus(id, status) {
+      try {
+        const d = await api('/api/seller/listings/' + id + '/status', { method: 'POST', body: { status } });
+        toast(d.message || 'OK');
+        renderSellerList();
+      } catch (err) { toast(err.message); }
+    }
+
+    async function delListing(id) {
+      if (!confirm('确定删除该挂单？')) return;
+      try {
+        await api('/api/seller/listings/' + id, { method: 'DELETE' });
+        toast('已删除');
+        renderSellerList();
+      } catch (err) { toast(err.message); }
+    }
+
+    function openListingForm(listing) {
+      const data = listing || {};
+      const html = `
+        <div class="modal-mask">
+          <div class="modal">
+            <h3>${listing ? '编辑挂单' : '发布新挂单'}</h3>
+            <div class="field"><label>商品名称</label><input type="text" id="f-name" value="${data.name || ''}" placeholder="例如：雾晶 · 豪华袋"></div>
+            <div class="field">
+              <label>分类</label>
+              <select id="f-cat">
+                ${['currency','weapon','gear','consumable','other'].map((c) =>
+                  `<option value="${c}" ${data.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field"><label>价格（人民币 ¥）</label><input type="number" id="f-price" value="${data.priceCny || ''}" min="0.01" step="0.01" placeholder="例如：128"></div>
+            <div class="field"><label>库存数量</label><input type="number" id="f-stock" value="${data.stock || 1}" min="0" placeholder="例如：10"></div>
+            <div class="field"><label>描述（可选）</label><textarea id="f-desc" rows="2" placeholder="商品说明、发货时间等">${data.description || ''}</textarea></div>
+            <div class="modal-actions">
+              <button class="btn-ghost" onclick="closeModal()">取消</button>
+              <button class="btn-primary" onclick="submitListing('${data.id || ''}')">保存</button>
+            </div>
+          </div>
+        </div>`;
+      const wrap = document.createElement('div');
+      wrap.innerHTML = html.trim();
+      document.body.appendChild(wrap.firstChild);
+    }
+
+    async function submitListing(id) {
+      const body = {
+        name: document.getElementById('f-name').value,
+        category: document.getElementById('f-cat').value,
+        priceCny: Number(document.getElementById('f-price').value),
+        stock: Number(document.getElementById('f-stock').value) || 0,
+        description: document.getElementById('f-desc').value,
+      };
+      try {
+        if (id) await api('/api/seller/listings/' + id, { method: 'PUT', body });
+        else await api('/api/seller/listings', { method: 'POST', body });
+        closeModal();
+        toast('已保存');
+        renderSellerList();
+      } catch (err) { toast(err.message); }
+    }
+
+    function editListing(id) {
+      const l = sellerListings.find((x) => x.id === id);
+      if (l) openListingForm(l);
+    }
+
+    function closeModal() {
+      document.querySelector('.modal-mask')?.remove();
+    }
+
+    // ---------- 初始化 ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.auth-tab').forEach((el) =>
+        el.addEventListener('click', () => showTab(el.dataset.tab)));
+      showTab('login');
+      applyLang();
+      if (isLoggedIn()) renderPanel();
+    });
+  </script>
+</body>
+</html>
